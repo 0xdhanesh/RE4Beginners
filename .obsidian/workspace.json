@@ -78,7 +78,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "4e5186cbb72facd3",
@@ -169,7 +170,7 @@
       "bases:Create new base": false
     }
   },
-  "active": "531a704d81c40153",
+  "active": "03362a0bdba1548b",
   "lastOpenFiles": [
     "Template/Linux ARM Mac.md",
     "basics/hello_world/Linux.md",

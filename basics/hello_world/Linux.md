@@ -227,25 +227,79 @@ Key to Flags:
 >	- Crucial sections for understanding how program interacts with the shared libraries
 >	- `.interp`, specifies the path of the dynamic linker. These information are used by the Kernel to load the necessary shared libraries for the program
 >	- `.dynsym`& `.dynstr`, dynamic symbols and strings table. Information related to the functions and variables that are imported from and exported to the shared libraries can be found in this section.
->	- `.rel.plt` & `.plt`, procedure linkage table
+>	- `.rel.plt` & `.plt`, procedure linkage table and its associated relocations are used to lazily resolve the address of functions from shared libraries. i.e., when the `printf` is called by the program for the first time, the real address of the `printf` is found from the `libc` and patches it in for future calls. This is the foundation for attacks like a `GOT Overwrite`
+>- Writable Sections:
+>	- Primary target for memory corruption issues because of the presence of `WA` flags
+>	- `.data` sections stores the initialized global and static variables
+>	- `.bss` sections is used for uninitialized global and static variables, the `NOBITS` type mean it does not take up any space in the file itself but it is allocated in memory. The `OS` zeros it out when the program is loaded
+>	- `.got` & `.got.plt`, The Global Offset Table, one of the most critical sections for exploit development
+>	- `.got.plt` contains the actual pointers to functions in shared libraries, when a GOT overwrite attack, an address within this section will be written to hijack the control flow
+>- Symbol and Debug Information
+>	- `.symtab` & `.strtab`, the symbol table and its corresponding string table.
+>	- These contain information about `all` symbols in the binary, including function names, variable names and file names
+>	- When a binary is `stripped`, these sections are removed from the binary.
 
 #### Signature check
 ```bash
-readelf -S binary_name | grep -E "sig|signature"
-elfsign verify -e ./binary_name
-objdump -h binary_name | grep -E "sig|signature"
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ readelf -S 32bit_InSecure_hello_world | grep -i -E 'sig|sign|cert|auth'
 ```
+- The ELF binary is not signed with any certificate
+>[!NOTE]
+>- A signed binary will have a new section in the binary with the name matching any of the matching patters `sig/sign/cert/auth`
+>- The section can be dumped with `objcopy --dump-section .<sectionName>=signature.bin binaryName`
+>- Once the signature section is dumped, the contents can viewed with the utilities like `openssl`: `openssl pkcs7 -inform DER -in signature.bin -print_certs -text -noout`
 
 #### nm / nm -D
 ```bash
-# list symbols - static mode
-nm lib*.so
-# list symbols - dynamic mode
-nm -D lib*.so
-# demangle the symbols
-nm -D --demangle lib*.so
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ nm -D 32bit_InSecure_hello_world    
+         w __gmon_start__
+0804a004 R _IO_stdin_used
+         U __libc_start_main@GLIBC_2.34
+         U printf@GLIBC_2.0
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ nm 32bit_InSecure_hello_world    
+0804a110 r __abi_tag
+0804b240 B __bss_start
+0804b240 b completed.0
+0804b238 D __data_start
+0804b238 W data_start
+080490b0 t deregister_tm_clones
+08049090 T _dl_relocate_static_pie
+08049130 t __do_global_dtors_aux
+0804b134 d __do_global_dtors_aux_fini_array_entry
+0804b23c D __dso_handle
+0804b138 d _DYNAMIC
+0804b240 D _edata
+0804b244 B _end
+080491a8 T _fini
+0804a000 R _fp_hw
+08049160 t frame_dummy
+0804b130 d __frame_dummy_init_array_entry
+0804a10c r __FRAME_END__
+0804b224 d _GLOBAL_OFFSET_TABLE_
+         w __gmon_start__
+0804a014 r __GNU_EH_FRAME_HDR
+08049000 T _init
+0804a004 R _IO_stdin_used
+         U __libc_start_main@GLIBC_2.34
+08049166 T main
+         U printf@GLIBC_2.0
+080490f0 t register_tm_clones
+08049050 T _start
+0804b240 D __TMC_END__
+0804907d t __wrap_main
+080491a2 T __x86.get_pc_thunk.ax
+080490a0 T __x86.get_pc_thunk.bx                                             
 ```
-
+- The utility `nm` is used to list symbols from the object files. 
+- The `-D` flag shows the dynamic symbols which are linked at run time.
+- The `nm -D` specifically shows the symbols that are resolved by the dynamic linker at runtime.
+- `w` from the output shows that it is a weak symbol related to `grpof`, a profiling tool
+- `U` from the output shows that this is an undefined symbol. 
+- The `__libc_start_main@GLIBC_2.34` from the output means that this function is not defined within the binary but is expected to found in an external shared library (specifically GLIBC_2.34 or compatible), this function is crucial as it is called by the **`program's entry point`** to setup the C runtime environment and eventually call the main function
+- Undefined symbols are critical as the addresses of these functions are resolved during runtime and are stored in the GOT, overwriting the entries in the GOT for the functions is a common technique to hijack program execution
 #### strings
 ```bash
 ┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
