@@ -71,7 +71,7 @@
 - /lib/ld-linux.so.2
 	- dynamic linker that is responsible for loading libc and other shared libraries into the memory
 
->[! Note]
+>[!NOTE]
 > - In modern secure binaries, we cannot directly jump to our shell code, a method called `ret2libc` (return-to-libc) is used
 > - ret2libc workflow
 > 	- Overflow the stack buffer -> overwrite the saved return values with `system()` inside libc -> placing a pointer to the string `/bin/sh` on the stack and pass it as an argument to the `system()`
@@ -127,7 +127,7 @@ ELF Header:
 	- When the application is loaded on the debuggers like `GDB`, it wil usually stop at the entry point address by default.
 - Start of Program header
 	- `readelf -l`, tells the OS how to create the process image in the memory (i.e., what parts of the file to map as executable code and what as writable data)
-	 ```bash
+```bash
 ┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
 └─$ readelf -l 32bit_InSecure_hello_world 
 
@@ -163,54 +163,19 @@ Program Headers:
    08     .note.ABI-tag 
    09     .eh_frame_hdr 
    10     
-   
-# These are the instructions for the OS on how to load the program into memory
-############################### TODO ANALYZE AND REWRITE ###############################
-
-✦ This output from readelf -l shows the program's "segments." Think of these as instructions for the operating system on how
-  to load the program into memory.                                                                                                        
-
-  Here's the breakdown from an exploitation perspective:                                                                                  
-
-   * `Program Headers`: Each line describes a segment of the binary that will be mapped into memory. The most important
-     columns are Type, VirtAddr (Virtual Address), and Flg (Flags/Permissions).
-                                                                                                                                          
-   * `Type: LOAD`: These are the most important segments. They represent the actual parts of the file that are loaded into
-     memory. We can see four LOAD segments, but they can be grouped by permissions:          
-       * One segment at 0x08049000 has permissions R E (Read and Execute). This is the code segment, containing the program's
-         executable instructions (the .text section).                                                                                     
-       * One segment at 0x0804b130 has permissions RW (Read and Write). This is the data segment, where global variables and
-         other writable data are stored (the .data and .bss sections).
-
-   * `INTERP`: This just points to the dynamic linker, /lib/ld-linux.so.2, which we already knew.
-
-   * `GNU_STACK ... Flg: RWE`: This is the most critical piece of information in this entire output.                    
-       * This line explicitly defines the permissions for the program's stack.                                           
-       * The flags are RWE, which stands for Read, Write, and Execute.
-       * This is the definitive confirmation of what checksec told us earlier: the stack is executable. This is a major
-         security vulnerability and is the reason the NX (No-eXecute) protection is disabled.
-                                                                     
-   * `Section to Segment mapping`: This useful table at the bottom shows which sections (which we'll see with readelf -S) are
-     included in which segments. For example, it shows that segment 03 contains the .text (code) section, and segment 05
-     contains the .data and .got sections.
-───────
-  Conclusion:
-
-  The readelf -l output confirms our previous findings and gives us the low-level details. The GNU_STACK header with RWE
-  permissions is the smoking gun. It tells us that the operating system is being instructed to create a stack that we can
-  write our shellcode to and then execute.
-
-  We now have a complete picture of the binary's lack of security:
-   1. No Stack Canary: Nothing to detect our overflow.
-   2. Executable Stack: We can run code we place on the stack.
-   3. No PIE: The code addresses are static and predictable.
-
-  The path forward is clear: find a buffer overflow, overwrite the return address to point to shellcode that we've placed on
-   the stack, and gain control of the program. The next step is to find that vulnerable function.
 ```
+
+>[!NOTE]
+> - These are the instructions for the OS on how to load the program into memory 
+> - Program headers, describes a segment of binaries that will be mapped into the memory, important information are Type, VirtAddr(Virtual Address) and Flg (Flag permissions)
+> - Type: LOAD, are the most important segments. As these represent the actual parts of the file that are loaded into the memory. These data can be grouped with permissions, R E (Read and Execute) segments are the code segment which contains the executable instructions (the `.text` section). The R W (Read and Write) segements are the data segment, where the global variables and other writable data are stored (.data and .bss sections).
+> - INTERP, just points to a dynamic linker
+> - GNU_STACK...Flg: RWE (Read, Write and Exectuable), most critical piece of information in the entire output as this line explicitly defines the permissions for the program's stack. This directly says that the NX protection is disabled
+> - Section - Segment mapping, the output of this can be seen from `readelf -S` The segment 03 contains the .text (code) section an d segment 05 contains `.data` and `.got` sections
+
 - Start of the Section header
 	- `readelf -S`. describes the sections of the binary `.text` - code, `.data` - initialized data, `.rodata` - read only data etc..,
-	 ```bash
+```bash
 ┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
 └─$ readelf -S 32bit_InSecure_hello_world 
 There are 29 section headers, starting at offset 0x27a4:
@@ -251,7 +216,19 @@ Key to Flags:
   L (link order), O (extra OS processing required), G (group), T (TLS),
   C (compressed), x (unknown), o (OS specific), E (exclude),
   D (mbind), p (processor specific)
-	 ```
+```
+  
+  >[!NOTE]
+  >- Code and Read-Only Data (`.text`, `.rodata`, `.init`):
+  >	- `.text`, is the most important section which contains actual executable code. `AX` flag means its Allocated in memory and is Executable. When disassembled, these are the contents that we will be looking at
+  >	- `.rodata`, contains Read-Only data, these sections contains read only data such as constant strings. The lack of `W` flag implies that the program cannot modify this data at runtime
+  >	- `.init`, contains the initialisation and finalisation code that runs before `main` and after `main` exists, these are executable sections
+>-  Dynamic Linking Information:
+>	- Crucial sections for understanding how program interacts with the shared libraries
+>	- `.interp`, specifies the path of the dynamic linker. These information are used by the Kernel to load the necessary shared libraries for the program
+>	- `.dynsym`& `.dynstr`, dynamic symbols and strings table. Information related to the functions and variables that are imported from and exported to the shared libraries can be found in this section.
+>	- `.rel.plt` & `.plt`, procedure linkage table
+
 #### Signature check
 ```bash
 readelf -S binary_name | grep -E "sig|signature"
