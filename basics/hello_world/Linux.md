@@ -296,10 +296,38 @@ Key to Flags:
 - The utility `nm` is used to list symbols from the object files. 
 - The `-D` flag shows the dynamic symbols which are linked at run time.
 - The `nm -D` specifically shows the symbols that are resolved by the dynamic linker at runtime.
-- `w` from the output shows that it is a weak symbol related to `grpof`, a profiling tool
-- `U` from the output shows that this is an undefined symbol. 
-- The `__libc_start_main@GLIBC_2.34` from the output means that this function is not defined within the binary but is expected to found in an external shared library (specifically GLIBC_2.34 or compatible), this function is crucial as it is called by the **`program's entry point`** to setup the C runtime environment and eventually call the main function
-- Undefined symbols are critical as the addresses of these functions are resolved during runtime and are stored in the GOT, overwriting the entries in the GOT for the functions is a common technique to hijack program execution
+	- `w` from the output shows that it is a weak symbol related to `grpof`, a profiling tool
+	- `U` from the output shows that this is an undefined symbol. 
+	- The `__libc_start_main@GLIBC_2.34` from the output means that this function is not defined within the binary but is expected to found in an external shared library (specifically GLIBC_2.34 or compatible), this function is crucial as it is called by the **`program's entry point`** to setup the C runtime environment and eventually call the main function
+	- Undefined symbols are critical as the addresses of these functions are resolved during runtime and are stored in the GOT, overwriting the entries in the GOT for the functions is a common technique to hijack program execution
+- The output of `nm <binary>` shows comprehensive list including both static and dynamic symbols as well as internal functions and data.
+	- Program Entry and Exit Points;
+		- `_start` is the absolute entry point of the executable and is the very first instruction executed when the program runs, the `T` indicates that it is present in the `.text`section
+		- `main` is the main logic of the C Program
+		- `_init` & `_fini`, initialization function that runs before main and finalization function that runs after the main completes
+	- External Library functions;
+		- Same as above, identified with `U`
+	- Global Data Sections; - `Potential targets for overwrites`
+		- `__data_start` & `data_start`, these marks the beginning of the `.data` section which holds all the **initialized global and static variables;**
+			- `D`, initialized data section
+			- `W`, weak symbol
+		- `__bss_start`, marks the beginning of the `.bss` section, which holds **uninitialized global and static variables**;
+			- `B`, available in the `.bss` section
+		- `B _end`, marks the end of the `.bss` section and end of the program's data segments
+		- `_GLOBAL_OFFSET_TABLE_`, the Global offset Table (`GOT`) itself, whose address is crucial for `GOT Overwrite Attacks`
+		- These contains pointers to dynamically linked functions
+			- `d`, indicates that it is in the initialized data section
+	- Internal Functions;
+		- `deresgister_tm_clones`,`__do_global_dtors_aux` & `register_tm_clones`m internal functions often realted to C++ global constructors and deconstructors or thread-local storage
+			- `t`, indicates that its in the `.text` section
+		- `__wrap_main`, an interesting function that suggests that the main function is wrapped by another function, possibly for debugging, profiling or specific linking behaviour
+		- `__x86.get_pc_thunk.ax` & `__x86.get_pc_thunk.bx`, the thunk functions used to get the current program counter `PC` in position-independent code `PIC`. The presence of these code strongly suggest that either `PIE` is enabled or the program is compiled with `PIC-Compatiable` code generation
+	- Read Only data:
+		- `__abi_tag`, a read only data symbol
+		- `_IO_stdin_used` is a function originated from the standard I/O library, which signifies that a component related to standard input operations
+		- `_fp_hw`, a read-only symbol likely related to floating point
+		- `__FRAME_END__` & `__GNU_EH_FRAME_HDR`, Read-only data symbols related to exception handling and stack unwinding
+
 #### strings
 ```bash
 ┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
