@@ -338,10 +338,46 @@ printf@GLIBC_2.0
 _dl_relocate_static_pie
 ```
 - Looking for presence of readable ascii characters on the binary.
+
 #### strace / ltrace
 ```bash
 # system calls trace
-strace ./binary_name
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ strace ./32bit_InSecure_hello_world   
+execve("./32bit_InSecure_hello_world", ["./32bit_InSecure_hello_world"], 0x7fffda8f94e0 /* 56 vars */) = 0
+[ Process PID=2863 runs in 32 bit mode. ]
+brk(NULL)                               = 0x8f80000
+mmap2(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xf7f98000
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_LARGEFILE|O_CLOEXEC) = 3
+statx(3, "", AT_STATX_SYNC_AS_STAT|AT_NO_AUTOMOUNT|AT_EMPTY_PATH, STATX_BASIC_STATS, {stx_mask=STATX_BASIC_STATS|STATX_MNT_ID, stx_attributes=0, stx_mode=S_IFREG|0644, stx_size=103355, ...}) = 0
+mmap2(NULL, 103355, PROT_READ, MAP_PRIVATE, 3, 0) = 0xf7f7e000
+close(3)                                = 0
+openat(AT_FDCWD, "/lib32/libc.so.6", O_RDONLY|O_LARGEFILE|O_CLOEXEC) = 3
+read(3, "\177ELF\1\1\1\3\0\0\0\0\0\0\0\0\3\0\3\0\1\0\0\0\0O\2\0004\0\0\0"..., 512) = 512
+statx(3, "", AT_STATX_SYNC_AS_STAT|AT_NO_AUTOMOUNT|AT_EMPTY_PATH, STATX_BASIC_STATS, {stx_mask=STATX_BASIC_STATS|STATX_MNT_ID, stx_attributes=0, stx_mode=S_IFREG|0755, stx_size=2315004, ...}) = 0
+mmap2(NULL, 2349360, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0xf7d40000
+mmap2(0xf7d63000, 1609728, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x23000) = 0xf7d63000
+mmap2(0xf7eec000, 544768, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1ac000) = 0xf7eec000
+mmap2(0xf7f71000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x231000) = 0xf7f71000
+mmap2(0xf7f74000, 39216, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xf7f74000
+close(3)                                = 0
+set_thread_area({entry_number=-1, base_addr=0xf7f994c0, limit=0x0fffff, seg_32bit=1, contents=0, read_exec_only=0, limit_in_pages=1, seg_not_present=0, useable=1}) = 0 (entry_number=12)
+set_tid_address(0xf7f99528)             = 2863
+set_robust_list(0xf7f9952c, 12)         = 0
+rseq(0xf7f99440, 0x20, 0, 0x53053053)   = 0
+mprotect(0xf7f71000, 8192, PROT_READ)   = 0
+mprotect(0xf7fd6000, 8192, PROT_READ)   = 0
+ugetrlimit(RLIMIT_STACK, {rlim_cur=8192*1024, rlim_max=RLIM_INFINITY}) = 0
+munmap(0xf7f7e000, 103355)              = 0
+statx(1, "", AT_STATX_SYNC_AS_STAT|AT_NO_AUTOMOUNT|AT_EMPTY_PATH, STATX_BASIC_STATS, {stx_mask=STATX_BASIC_STATS|STATX_MNT_ID, stx_attributes=0, stx_mode=S_IFCHR|0600, stx_size=0, ...}) = 0
+getrandom("\xec\xd8\x6f\x95", 4, GRND_NONBLOCK) = 4
+brk(NULL)                               = 0x8f80000
+brk(0x8fa1000)                          = 0x8fa1000
+brk(0x8fa2000)                          = 0x8fa2000
+write(1, "Hello World", 11Hello World)             = 11
+exit_group(0)                           = ?
++++ exited with 0 +++                          
 # -f: follow forks (child processes)
 # -s <size>: specify the maximum string size to print (default is 32)
 # -o <file>: write the output to a file instead of stderr
@@ -350,7 +386,11 @@ strace ./binary_name
 strace -f -s 1024 -o strace.out ./binary_name
 
 # library calls trace
-ltrace ./binary_name
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ ltrace ./32bit_InSecure_hello_world 
+__libc_start_main(["./32bit_InSecure_hello_world"] <unfinished ...>
+printf("Hello World")                                                                           = 11
+Hello World+++ exited (status 0) +++
 # -f: follow forks
 # -s <size>: specify the maximum string size to print
 # -o <file>: write the output to a file
@@ -364,38 +404,499 @@ ltrace -f -s 1024 -o ltrace.out ./binary_name
 #### objdump
 ```bash
 # section analysis
-objdump -s --section .rodata binary_name # .rodata
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ objdump -s --section .rodata ./32bit_InSecure_hello_world 
+
+./32bit_InSecure_hello_world:     file format elf32-i386
+
+Contents of section .rodata:
+ 804a000 03000000 01000200 48656c6c 6f20576f  ........Hello Wo
+ 804a010 726c6400                             rld.            
 # assembly instructions
-objdump -d binary_name
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ objdump -d ./32bit_InSecure_hello_world 
+./32bit_InSecure_hello_world:     file format elf32-i386
+
+
+Disassembly of section .init:
+
+08049000 <_init>:
+ 8049000:	53                   	push   %ebx
+ 8049001:	83 ec 08             	sub    $0x8,%esp
+ 8049004:	e8 97 00 00 00       	call   80490a0 <__x86.get_pc_thunk.bx>
+ 8049009:	81 c3 1b 22 00 00    	add    $0x221b,%ebx
+ 804900f:	8b 83 fc ff ff ff    	mov    -0x4(%ebx),%eax
+ 8049015:	85 c0                	test   %eax,%eax
+ 8049017:	74 02                	je     804901b <_init+0x1b>
+ 8049019:	ff d0                	call   *%eax
+ 804901b:	83 c4 08             	add    $0x8,%esp
+ 804901e:	5b                   	pop    %ebx
+ 804901f:	c3                   	ret
+
+Disassembly of section .plt:
+
+08049020 <__libc_start_main@plt-0x10>:
+ 8049020:	ff 35 28 b2 04 08    	push   0x804b228
+ 8049026:	ff 25 2c b2 04 08    	jmp    *0x804b22c
+ 804902c:	00 00                	add    %al,(%eax)
+	...
+
+08049030 <__libc_start_main@plt>:
+ 8049030:	ff 25 30 b2 04 08    	jmp    *0x804b230
+ 8049036:	68 00 00 00 00       	push   $0x0
+ 804903b:	e9 e0 ff ff ff       	jmp    8049020 <_init+0x20>
+
+08049040 <printf@plt>:
+ 8049040:	ff 25 34 b2 04 08    	jmp    *0x804b234
+ 8049046:	68 08 00 00 00       	push   $0x8
+ 804904b:	e9 d0 ff ff ff       	jmp    8049020 <_init+0x20>
+
+Disassembly of section .text:
+
+08049050 <_start>:
+ 8049050:	31 ed                	xor    %ebp,%ebp
+ 8049052:	5e                   	pop    %esi
+ 8049053:	89 e1                	mov    %esp,%ecx
+ 8049055:	83 e4 f0             	and    $0xfffffff0,%esp
+ 8049058:	50                   	push   %eax
+ 8049059:	54                   	push   %esp
+ 804905a:	52                   	push   %edx
+ 804905b:	e8 19 00 00 00       	call   8049079 <_start+0x29>
+ 8049060:	81 c3 c4 21 00 00    	add    $0x21c4,%ebx
+ 8049066:	6a 00                	push   $0x0
+ 8049068:	6a 00                	push   $0x0
+ 804906a:	51                   	push   %ecx
+ 804906b:	56                   	push   %esi
+ 804906c:	8d 83 59 de ff ff    	lea    -0x21a7(%ebx),%eax
+ 8049072:	50                   	push   %eax
+ 8049073:	e8 b8 ff ff ff       	call   8049030 <__libc_start_main@plt>
+ 8049078:	f4                   	hlt
+ 8049079:	8b 1c 24             	mov    (%esp),%ebx
+ 804907c:	c3                   	ret
+
+0804907d <__wrap_main>:
+ 804907d:	e9 e4 00 00 00       	jmp    8049166 <main>
+ 8049082:	66 90                	xchg   %ax,%ax
+ 8049084:	66 90                	xchg   %ax,%ax
+ 8049086:	66 90                	xchg   %ax,%ax
+ 8049088:	66 90                	xchg   %ax,%ax
+ 804908a:	66 90                	xchg   %ax,%ax
+ 804908c:	66 90                	xchg   %ax,%ax
+ 804908e:	66 90                	xchg   %ax,%ax
+
+08049090 <_dl_relocate_static_pie>:
+ 8049090:	c3                   	ret
+ 8049091:	66 90                	xchg   %ax,%ax
+ 8049093:	66 90                	xchg   %ax,%ax
+ 8049095:	66 90                	xchg   %ax,%ax
+ 8049097:	66 90                	xchg   %ax,%ax
+ 8049099:	66 90                	xchg   %ax,%ax
+ 804909b:	66 90                	xchg   %ax,%ax
+ 804909d:	66 90                	xchg   %ax,%ax
+ 804909f:	90                   	nop
+
+080490a0 <__x86.get_pc_thunk.bx>:
+ 80490a0:	8b 1c 24             	mov    (%esp),%ebx
+ 80490a3:	c3                   	ret
+ 80490a4:	66 90                	xchg   %ax,%ax
+ 80490a6:	66 90                	xchg   %ax,%ax
+ 80490a8:	66 90                	xchg   %ax,%ax
+ 80490aa:	66 90                	xchg   %ax,%ax
+ 80490ac:	66 90                	xchg   %ax,%ax
+ 80490ae:	66 90                	xchg   %ax,%ax
+
+080490b0 <deregister_tm_clones>:
+ 80490b0:	b8 40 b2 04 08       	mov    $0x804b240,%eax
+ 80490b5:	3d 40 b2 04 08       	cmp    $0x804b240,%eax
+ 80490ba:	74 24                	je     80490e0 <deregister_tm_clones+0x30>
+ 80490bc:	b8 00 00 00 00       	mov    $0x0,%eax
+ 80490c1:	85 c0                	test   %eax,%eax
+ 80490c3:	74 1b                	je     80490e0 <deregister_tm_clones+0x30>
+ 80490c5:	55                   	push   %ebp
+ 80490c6:	89 e5                	mov    %esp,%ebp
+ 80490c8:	83 ec 14             	sub    $0x14,%esp
+ 80490cb:	68 40 b2 04 08       	push   $0x804b240
+ 80490d0:	ff d0                	call   *%eax
+ 80490d2:	83 c4 10             	add    $0x10,%esp
+ 80490d5:	c9                   	leave
+ 80490d6:	c3                   	ret
+ 80490d7:	90                   	nop
+ 80490d8:	2e 8d b4 26 00 00 00 	lea    %cs:0x0(%esi,%eiz,1),%esi
+ 80490df:	00 
+ 80490e0:	c3                   	ret
+ 80490e1:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+ 80490e8:	2e 8d b4 26 00 00 00 	lea    %cs:0x0(%esi,%eiz,1),%esi
+ 80490ef:	00 
+
+080490f0 <register_tm_clones>:
+ 80490f0:	b8 40 b2 04 08       	mov    $0x804b240,%eax
+ 80490f5:	2d 40 b2 04 08       	sub    $0x804b240,%eax
+ 80490fa:	89 c2                	mov    %eax,%edx
+ 80490fc:	c1 e8 1f             	shr    $0x1f,%eax
+ 80490ff:	c1 fa 02             	sar    $0x2,%edx
+ 8049102:	01 d0                	add    %edx,%eax
+ 8049104:	d1 f8                	sar    $1,%eax
+ 8049106:	74 20                	je     8049128 <register_tm_clones+0x38>
+ 8049108:	ba 00 00 00 00       	mov    $0x0,%edx
+ 804910d:	85 d2                	test   %edx,%edx
+ 804910f:	74 17                	je     8049128 <register_tm_clones+0x38>
+ 8049111:	55                   	push   %ebp
+ 8049112:	89 e5                	mov    %esp,%ebp
+ 8049114:	83 ec 10             	sub    $0x10,%esp
+ 8049117:	50                   	push   %eax
+ 8049118:	68 40 b2 04 08       	push   $0x804b240
+ 804911d:	ff d2                	call   *%edx
+ 804911f:	83 c4 10             	add    $0x10,%esp
+ 8049122:	c9                   	leave
+ 8049123:	c3                   	ret
+ 8049124:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+ 8049128:	c3                   	ret
+ 8049129:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+
+08049130 <__do_global_dtors_aux>:
+ 8049130:	f3 0f 1e fb          	endbr32
+ 8049134:	80 3d 40 b2 04 08 00 	cmpb   $0x0,0x804b240
+ 804913b:	75 1b                	jne    8049158 <__do_global_dtors_aux+0x28>
+ 804913d:	55                   	push   %ebp
+ 804913e:	89 e5                	mov    %esp,%ebp
+ 8049140:	83 ec 08             	sub    $0x8,%esp
+ 8049143:	e8 68 ff ff ff       	call   80490b0 <deregister_tm_clones>
+ 8049148:	c6 05 40 b2 04 08 01 	movb   $0x1,0x804b240
+ 804914f:	c9                   	leave
+ 8049150:	c3                   	ret
+ 8049151:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+ 8049158:	c3                   	ret
+ 8049159:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+
+08049160 <frame_dummy>:
+ 8049160:	f3 0f 1e fb          	endbr32
+ 8049164:	eb 8a                	jmp    80490f0 <register_tm_clones>
+
+08049166 <main>:
+ 8049166:	8d 4c 24 04          	lea    0x4(%esp),%ecx
+ 804916a:	83 e4 f0             	and    $0xfffffff0,%esp
+ 804916d:	ff 71 fc             	push   -0x4(%ecx)
+ 8049170:	55                   	push   %ebp
+ 8049171:	89 e5                	mov    %esp,%ebp
+ 8049173:	53                   	push   %ebx
+ 8049174:	51                   	push   %ecx
+ 8049175:	e8 28 00 00 00       	call   80491a2 <__x86.get_pc_thunk.ax>
+ 804917a:	05 aa 20 00 00       	add    $0x20aa,%eax
+ 804917f:	83 ec 0c             	sub    $0xc,%esp
+ 8049182:	8d 90 e4 ed ff ff    	lea    -0x121c(%eax),%edx
+ 8049188:	52                   	push   %edx
+ 8049189:	89 c3                	mov    %eax,%ebx
+ 804918b:	e8 b0 fe ff ff       	call   8049040 <printf@plt>
+ 8049190:	83 c4 10             	add    $0x10,%esp
+ 8049193:	b8 00 00 00 00       	mov    $0x0,%eax
+ 8049198:	8d 65 f8             	lea    -0x8(%ebp),%esp
+ 804919b:	59                   	pop    %ecx
+ 804919c:	5b                   	pop    %ebx
+ 804919d:	5d                   	pop    %ebp
+ 804919e:	8d 61 fc             	lea    -0x4(%ecx),%esp
+ 80491a1:	c3                   	ret
+
+080491a2 <__x86.get_pc_thunk.ax>:
+ 80491a2:	8b 04 24             	mov    (%esp),%eax
+ 80491a5:	c3                   	ret
+
+Disassembly of section .fini:
+
+080491a8 <_fini>:
+ 80491a8:	53                   	push   %ebx
+ 80491a9:	83 ec 08             	sub    $0x8,%esp
+ 80491ac:	e8 ef fe ff ff       	call   80490a0 <__x86.get_pc_thunk.bx>
+ 80491b1:	81 c3 73 20 00 00    	add    $0x2073,%ebx
+ 80491b7:	83 c4 08             	add    $0x8,%esp
+ 80491ba:	5b                   	pop    %ebx
+ 80491bb:	c3                   	ret
 ```
 
 #### gdb / r2
 ```bash
 # start gdb
-gdb binary_name
-# gdb commands
-info functions # ; list all the functions
-disass main # ; disassmeble main function
-b *memory_address # ; breakpoint
-run # ; executes the binary
-display/i $pc # ; display instruction at the current program counter
-info registers rax # ; inspect the contents of rax register
-x/s memory_address # ; inspect stack
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ gdb -q ./32bit_InSecure_hello_world
+Reading symbols from ./32bit_InSecure_hello_world...
+(No debugging symbols found in ./32bit_InSecure_hello_world)
+(gdb) info functions
+All defined functions:
+
+Non-debugging symbols:
+0x08049000  _init
+0x08049030  __libc_start_main@plt
+0x08049040  printf@plt
+0x08049050  _start
+0x0804907d  __wrap_main
+0x08049090  _dl_relocate_static_pie
+0x080490a0  __x86.get_pc_thunk.bx
+0x080490b0  deregister_tm_clones
+0x080490f0  register_tm_clones
+0x08049130  __do_global_dtors_aux
+0x08049160  frame_dummy
+0x08049166  main
+0x080491a2  __x86.get_pc_thunk.ax
+0x080491a8  _fini
+(gdb) set disassembly-flavor intel
+(gdb) diss main
+Undefined command: "diss".  Try "help".
+(gdb) diass main
+Undefined command: "diass".  Try "help".
+(gdb) disass main
+Dump of assembler code for function main:
+   0x08049166 <+0>:     lea    ecx,[esp+0x4]
+   0x0804916a <+4>:     and    esp,0xfffffff0
+   0x0804916d <+7>:     push   DWORD PTR [ecx-0x4]
+   0x08049170 <+10>:    push   ebp
+   0x08049171 <+11>:    mov    ebp,esp
+   0x08049173 <+13>:    push   ebx
+   0x08049174 <+14>:    push   ecx
+   0x08049175 <+15>:    call   0x80491a2 <__x86.get_pc_thunk.ax>
+   0x0804917a <+20>:    add    eax,0x20aa
+   0x0804917f <+25>:    sub    esp,0xc
+   0x08049182 <+28>:    lea    edx,[eax-0x121c]
+   0x08049188 <+34>:    push   edx
+   0x08049189 <+35>:    mov    ebx,eax
+   0x0804918b <+37>:    call   0x8049040 <printf@plt>
+   0x08049190 <+42>:    add    esp,0x10
+   0x08049193 <+45>:    mov    eax,0x0
+   0x08049198 <+50>:    lea    esp,[ebp-0x8]
+   0x0804919b <+53>:    pop    ecx
+   0x0804919c <+54>:    pop    ebx
+   0x0804919d <+55>:    pop    ebp
+   0x0804919e <+56>:    lea    esp,[ecx-0x4]
+   0x080491a1 <+59>:    ret
+End of assembler dump.
+(gdb) b *main
+Breakpoint 1 at 0x8049166
+(gdb) run
+Starting program: /home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Breakpoint 1, 0x08049166 in main ()
+(gdb) display/i $pc
+1: x/i $pc
+=> 0x8049166 <main>:    lea    ecx,[esp+0x4]
+(gdb) info registers eax
+eax            0x804907d           134516861
+(gdb) x/s 0x804907d
+0x804907d <_start+45>:  "\351", <incomplete sequence \344>
 quit # ; exit gdb
 
 ## advanced
-info files # ; symbols, entry points will be listed
-set pagination off # ; doesnt breaks the output
-set logging on # ; output will be copied to gdb.txt
-set logging redirect on # ; output will be redirect to gdb.txt
+(gdb) info files
+Symbols from "/home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world".
+Native process:
+        Using the running image of child process 22205.
+        While running this, GDB does not access memory from...
+Local exec file:
+        `/home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world', file type elf32-i386.
+        Entry point: 0x8049050
+        0x08048194 - 0x080481b8 is .note.gnu.build-id
+        0x080481b8 - 0x080481cb is .interp
+        0x080481cc - 0x080481ec is .gnu.hash
+        0x080481ec - 0x0804823c is .dynsym
+        0x0804823c - 0x08048293 is .dynstr
+        0x08048294 - 0x0804829e is .gnu.version
+        0x080482a0 - 0x080482d0 is .gnu.version_r
+        0x080482d0 - 0x080482d8 is .rel.dyn
+        0x080482d8 - 0x080482e8 is .rel.plt
+        0x08049000 - 0x08049020 is .init
+        0x08049020 - 0x08049050 is .plt
+        0x08049050 - 0x080491a6 is .text
+        0x080491a8 - 0x080491bc is .fini
+        0x0804a000 - 0x0804a014 is .rodata
+        0x0804a014 - 0x0804a048 is .eh_frame_hdr
+        0x0804a048 - 0x0804a110 is .eh_frame
+        0x0804a110 - 0x0804a130 is .note.ABI-tag
+        0x0804b130 - 0x0804b134 is .init_array
+        0x0804b134 - 0x0804b138 is .fini_array
+        0x0804b138 - 0x0804b220 is .dynamic
+        0x0804b220 - 0x0804b224 is .got
+        0x0804b224 - 0x0804b238 is .got.plt
+        0x0804b238 - 0x0804b240 is .data
+        0x0804b240 - 0x0804b244 is .bss
+        0xf7fc7154 - 0xf7fc7178 is .note.gnu.build-id in /lib/ld-linux.so.2
+        0xf7fc7178 - 0xf7fc72b8 is .hash in /lib/ld-linux.so.2
+        0xf7fc72b8 - 0xf7fc741c is .gnu.hash in /lib/ld-linux.so.2
+        0xf7fc741c - 0xf7fc76ac is .dynsym in /lib/ld-linux.so.2
+        0xf7fc76ac - 0xf7fc795f is .dynstr in /lib/ld-linux.so.2
+        0xf7fc7960 - 0xf7fc79b2 is .gnu.version in /lib/ld-linux.so.2
+        0xf7fc79b4 - 0xf7fc7ac4 is .gnu.version_d in /lib/ld-linux.so.2
+        0xf7fc7ac4 - 0xf7fc7acc is .rel.dyn in /lib/ld-linux.so.2
+        0xf7fc7acc - 0xf7fc7ad8 is .relr.dyn in /lib/ld-linux.so.2
+        0xf7fc8000 - 0xf7feb751 is .text in /lib/ld-linux.so.2
+        0xf7fec000 - 0xf7ff21e0 is .rodata in /lib/ld-linux.so.2
+        0xf7ff21e0 - 0xf7ff2d74 is .eh_frame_hdr in /lib/ld-linux.so.2
+        0xf7ff2d74 - 0xf7ffa2e8 is .eh_frame in /lib/ld-linux.so.2
+        0xf7ffb9c0 - 0xf7ffcf2c is .data.rel.ro in /lib/ld-linux.so.2
+        0xf7ffcf2c - 0xf7ffcfec is .dynamic in /lib/ld-linux.so.2
+        0xf7ffcfec - 0xf7ffcff8 is .got in /lib/ld-linux.so.2
+        0xf7ffd000 - 0xf7ffd638 is .data in /lib/ld-linux.so.2
+        0xf7ffd640 - 0xf7ffda54 is .bss in /lib/ld-linux.so.2
+        0xf7fc50b4 - 0xf7fc50f8 is .hash in system-supplied DSO at 0xf7fc5000
+        0xf7fc50f8 - 0xf7fc5148 is .gnu.hash in system-supplied DSO at 0xf7fc5000
+        0xf7fc5148 - 0xf7fc5208 is .dynsym in system-supplied DSO at 0xf7fc5000
+        0xf7fc5208 - 0xf7fc52d6 is .dynstr in system-supplied DSO at 0xf7fc5000
+        0xf7fc52d6 - 0xf7fc52ee is .gnu.version in system-supplied DSO at 0xf7fc5000
+        0xf7fc52f0 - 0xf7fc5344 is .gnu.version_d in system-supplied DSO at 0xf7fc5000
+        0xf7fc5344 - 0xf7fc53d4 is .dynamic in system-supplied DSO at 0xf7fc5000
+        0xf7fc53d4 - 0xf7fc53e0 is .rodata in system-supplied DSO at 0xf7fc5000
+        0xf7fc53e0 - 0xf7fc5444 is .note in system-supplied DSO at 0xf7fc5000
+        0xf7fc5444 - 0xf7fc5468 is .eh_frame_hdr in system-supplied DSO at 0xf7fc5000
+        0xf7fc5468 - 0xf7fc5574 is .eh_frame in system-supplied DSO at 0xf7fc5000
+        0xf7fc5580 - 0xf7fc69d6 is .text in system-supplied DSO at 0xf7fc5000
+        0xf7fc69d6 - 0xf7fc6ae0 is .altinstructions in system-supplied DSO at 0xf7fc5000
+        0xf7fc6ae0 - 0xf7fc6b2c is .altinstr_replacement in system-supplied DSO at 0xf7fc5000
+        0xf7d651d4 - 0xf7d651f8 is .note.gnu.build-id in /lib32/libc.so.6
+        0xf7d651f8 - 0xf7d697b0 is .hash in /lib32/libc.so.6
+        0xf7d697b0 - 0xf7d6ecdc is .gnu.hash in /lib32/libc.so.6
+        0xf7d6ecdc - 0xf7d7c3ac is .dynsym in /lib32/libc.so.6
+        0xf7d7c3ac - 0xf7d856c1 is .dynstr in /lib32/libc.so.6
+        0xf7d856c2 - 0xf7d8719c is .gnu.version in /lib32/libc.so.6
+        0xf7d8719c - 0xf7d878f0 is .gnu.version_d in /lib32/libc.so.6
+        0xf7d878f0 - 0xf7d87940 is .gnu.version_r in /lib32/libc.so.6
+        0xf7d87940 - 0xf7d87c30 is .rel.dyn in /lib32/libc.so.6
+        0xf7d87c30 - 0xf7d87cf0 is .rel.plt in /lib32/libc.so.6
+        0xf7d87cf0 - 0xf7d87e10 is .relr.dyn in /lib32/libc.so.6
+        0xf7d88000 - 0xf7d88190 is .plt in /lib32/libc.so.6
+        0xf7d88190 - 0xf7d881a0 is .plt.got in /lib32/libc.so.6
+        0xf7d881c0 - 0xf7f10849 is .text in /lib32/libc.so.6
+        0xf7f11000 - 0xf7f36488 is .rodata in /lib32/libc.so.6
+        0xf7f36488 - 0xf7f3649b is .interp in /lib32/libc.so.6
+        0xf7f3649c - 0xf7f3e680 is .eh_frame_hdr in /lib32/libc.so.6
+        0xf7f3e680 - 0xf7f95330 is .eh_frame in /lib32/libc.so.6
+        0xf7f95330 - 0xf7f95a4a is .gcc_except_table in /lib32/libc.so.6
+        0xf7f95a4c - 0xf7f95a6c is .note.ABI-tag in /lib32/libc.so.6
+        0xf7f96548 - 0xf7f96550 is .tdata in /lib32/libc.so.6
+        0xf7f96550 - 0xf7f96598 is .tbss in /lib32/libc.so.6
+        0xf7f96550 - 0xf7f96560 is .init_array in /lib32/libc.so.6
+        0xf7f96560 - 0xf7f97d0c is .data.rel.ro in /lib32/libc.so.6
+        0xf7f97d0c - 0xf7f97e14 is .dynamic in /lib32/libc.so.6
+        0xf7f97e14 - 0xf7f97ff0 is .got in /lib32/libc.so.6
+        0xf7f98000 - 0xf7f98eb8 is .data in /lib32/libc.so.6
+        0xf7f98ec0 - 0xf7fa2930 is .bss in /lib32/libc.so.6
+(gdb) quit
+A debugging session is active.
 
+        Inferior 1 [process 22205] will be killed.
+
+Quit anyway? (y or n) y
+                           
 # start r2
-r2 -A binary_name
-# r2 commadns
-aaa # ; analyze all
-afl # ; list functions
-info # ; show binary information
-pdf @ main # ; disassemble main function
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ r2 -A ./32bit_InSecure_hello_world 
+WARN: Relocs has not been applied. Please use `-e bin.relocs.apply=true` or `-e bin.cache=true` next time
+INFO: Analyze all flags starting with sym. and entry0 (aa)
+INFO: Analyze imports (af@@@i)
+INFO: Analyze entrypoint (af@ entry0)
+INFO: Analyze symbols (af@@@s)
+INFO: Analyze all functions arguments/locals (afva@@@F)
+INFO: Analyze function calls (aac)
+INFO: Analyze len bytes of instructions for references (aar)
+INFO: Finding and parsing C++ vtables (avrr)
+INFO: Analyzing methods (af @@ method.*)
+INFO: Recovering local variables (afva@@@F)
+INFO: Type matching analysis for all functions (aaft)
+INFO: Propagate noreturn information (aanr)
+INFO: Use -AA or aaaa to perform additional experimental analysis
+[0x08049050]> aaa
+INFO: Analyze all flags starting with sym. and entry0 (aa)
+INFO: Analyze imports (af@@@i)
+INFO: Analyze entrypoint (af@ entry0)
+INFO: Analyze symbols (af@@@s)
+INFO: Analyze all functions arguments/locals (afva@@@F)
+INFO: Analyze function calls (aac)
+INFO: Analyze len bytes of instructions for references (aar)
+INFO: Finding and parsing C++ vtables (avrr)
+INFO: Analyzing methods (af @@ method.*)
+INFO: Recovering local variables (afva@@@F)
+INFO: Type matching analysis for all functions (aaft)
+INFO: Propagate noreturn information (aanr)
+INFO: Use -AA or aaaa to perform additional experimental analysis
+[0x08049050]> afl
+0x08049030    1      6 sym.imp.__libc_start_main
+0x08049040    1      6 sym.imp.printf
+0x08049050    1     40 entry0
+0x08049079    1      4 fcn.08049079
+0x080490b0    4     40 sym.deregister_tm_clones
+0x080490f0    4     53 sym.register_tm_clones
+0x08049130    3     34 entry.fini0
+0x08049160    1      6 entry.init0
+0x080490a0    1      4 sym.__x86.get_pc_thunk.bx
+0x080491a8    1     20 sym._fini
+0x08049090    1      1 sym._dl_relocate_static_pie
+0x08049166    1     60 main
+0x080491a2    1      4 sym.__x86.get_pc_thunk.ax
+0x08049000    3     32 sym._init
+[0x08049050]> info
+ERROR: Invalid `n` subcommand, try `i?`
+[0x08049050]> i
+fd       3
+file     ./32bit_InSecure_hello_world
+size     0x2c2c
+humansz  11.0K
+mode     r-x
+format   elf
+iorw     false
+block    0x100
+type     EXEC (Executable file)
+arch     x86
+baddr    0x8048000
+binsz    10146
+bintype  elf
+bits     32
+canary   false
+injprot  false
+class    ELF32
+compiler GCC: (Debian 14.3.0-8) 14.3.0
+crypto   false
+endian   little
+havecode true
+intrp    /lib/ld-linux.so.2
+laddr    0x0
+lang     c
+linenum  true
+lsyms    true
+machine  Intel 80386
+nx       false
+os       linux
+pic      false
+relocs   true
+relro    no
+rpath    NONE
+sanitize false
+static   false
+stripped false
+subsys   linux
+va       true
+[0x08049050]> pdf @ main
+            ; CODE XREF from loc.__wrap_main @ 
+┌ 60: int main (char **argv);
+│ `- args(sp[0x4..0x4]) vars(1:sp[0x10..0x10])
+│           0x08049166      8d4c2404       lea ecx, [argv]
+│           0x0804916a      83e4f0         and esp, 0xfffffff0
+│           0x0804916d      ff71fc         push dword [ecx - 4]
+│           0x08049170      55             push ebp
+│           0x08049171      89e5           mov ebp, esp
+│           0x08049173      53             push ebx
+│           0x08049174      51             push ecx
+│           0x08049175      e828000000     call sym.__x86.get_pc_thunk.ax
+│           0x0804917a      05aa200000     add eax, 0x20aa
+│           0x0804917f      83ec0c         sub esp, 0xc
+│           0x08049182      8d90e4edffff   lea edx, [eax - 0x121c]
+│           0x08049188      52             push edx                    ; const char *format
+│           0x08049189      89c3           mov ebx, eax
+│           0x0804918b      e8b0feffff     call sym.imp.printf         ; int printf(const char *format)
+│           0x08049190      83c410         add esp, 0x10
+│           0x08049193      b800000000     mov eax, 0
+│           0x08049198      8d65f8         lea esp, [var_8h]
+│           0x0804919b      59             pop ecx
+│           0x0804919c      5b             pop ebx
+│           0x0804919d      5d             pop ebp
+│           0x0804919e      8d61fc         lea esp, [ecx - 4]
+└           0x080491a1      c3             ret
 db address # ; breakpoint
 dc # ; continue execution
 dr  / dr rax # ; show registers / show rax register
@@ -413,7 +914,7 @@ agf @ main # ; Function graph for 'main'
 ```
 
 #### GDB Memory Analysis
-```gdb
+```bash
 # GDB provides powerful commands to examine memory.
 
 # x: examine memory
@@ -425,13 +926,85 @@ agf @ main # ; Function graph for 'main'
 
 # Examples:
 x/32gx $rsp      # ; show 32 giant words (qwords) from the stack pointer in hex
+(gdb) x/32gx $esp
+No registers.
+(gdb) run
+Starting program: /home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Breakpoint 1, 0x08049166 in main ()
+(gdb) x/32gx $esp
+0xffffce1c:     0x00000001f7d89cc3      0xffffcedcffffced4
+0xffffce2c:     0xf7f97e14ffffce40      0x000000010804907d
+0xffffce3c:     0xf7f97e14ffffced4      0xf7ffcb600804b134
+0xffffce4c:     0x4d243fc500000000      0x00000000038179d5
+0xffffce5c:     0x0000000000000000      0x00000000f7ffcb60
+0xffffce6c:     0xf7ffda60c44d7200      0xf7f97e14f7d89c56
+0xffffce7c:     0xf7fc7ac4f7d89d88      0x000000000804b134
+0xffffce8c:     0x00000000f7ffd000      0xf7d89d09f7fd8390
+0xffffce9c:     0x000000010804b224      0x0000000008049050
+0xffffceac:     0x0804907d08049078      0xffffced400000001
+0xffffcebc:     0x0000000000000000      0xffffceccf7fcbd20
+0xffffcecc:     0x00000001f7ffda60      0x00000000ffffd0a1
+0xffffcedc:     0xffffd113ffffd104      0xffffd14affffd127
+0xffffceec:     0xffffd1a1ffffd180      0xffffd1ccffffd1ae
+0xffffcefc:     0xffffd1f8ffffd1e8      0xffffd213ffffd209
+0xffffcf0c:     0xffffd231ffffd220      0xffffd2ddffffd250
 x/10i $rip      # ; show 10 instructions from the instruction pointer
+(gdb) x/10i $eip
+=> 0x8049166 <main>:    lea    ecx,[esp+0x4]
+   0x804916a <main+4>:  and    esp,0xfffffff0
+   0x804916d <main+7>:  push   DWORD PTR [ecx-0x4]
+   0x8049170 <main+10>: push   ebp
+   0x8049171 <main+11>: mov    ebp,esp
+   0x8049173 <main+13>: push   ebx
+   0x8049174 <main+14>: push   ecx
+   0x8049175 <main+15>: call   0x80491a2 <__x86.get_pc_thunk.ax>
+   0x804917a <main+20>: add    eax,0x20aa
+   0x804917f <main+25>: sub    esp,0xc
 x/s 0x4005a0    # ; show string at address
+(gdb) x/s 0x00000001f7d89cc3
+0xf7d89cc3:     "\203\304\020\203\354\fP\350\001\236\001"
 x/40wx 0x7fffffffe1f0 # ; show 40 words (dwords) in hex
+(gdb) x/40wx 0x00000001f7d89cc3
+0xf7d89cc3:     0x8310c483      0xe8500cec      0x00019e01      0x068b2ce8
+0xf7d89cd3:     0x24048b00      0xa8a883f0      0x01000002      0x01ba1a74
+0xf7d89ce3:     0x31000000      0xb48d2edb      0x00000026      0x65d08900
+0xf7d89cf3:     0x001015ff      0xf5eb0000      0xc7ebc031      0x56575590
+0xf7d89d03:     0xa010e853      0xc3810015      0x0020e10b      0x8b1cec83
+0xf7d89d13:     0x8b442444      0x853c2474      0x831074c0      0x006a04ec
+0xf7d89d23:     0xe850006a      0x00019505      0x8b10c483      0x000110bb
+0xf7d89d33:     0x832f8b00      0x850f02e5      0x00000105      0x01bc838b
+0xf7d89d43:     0x008b0000      0x3d74f685      0x5004ec83      0x402474ff
+0xf7d89d53:     0x402474ff      0x938bd6ff      0x000001b0      0x8310c483
 
 # info proc mappings: show memory mappings of the process
-info proc mappings
+(gdb) info proc mappings
+process 26116
+Mapped address spaces:
 
+Start Addr End Addr   Size       Offset     Perms File 
+0x08048000 0x08049000 0x1000     0x0        r--p  /home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world 
+0x08049000 0x0804a000 0x1000     0x1000     r-xp  /home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world 
+0x0804a000 0x0804b000 0x1000     0x2000     r--p  /home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world 
+0x0804b000 0x0804c000 0x1000     0x2000     rw-p  /home/kali/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build/32bit_InSecure_hello_world 
+0xf7d65000 0xf7d88000 0x23000    0x0        r--p  /usr/lib32/libc.so.6 
+0xf7d88000 0xf7f11000 0x189000   0x23000    r-xp  /usr/lib32/libc.so.6 
+0xf7f11000 0xf7f96000 0x85000    0x1ac000   r--p  /usr/lib32/libc.so.6 
+0xf7f96000 0xf7f98000 0x2000     0x231000   r--p  /usr/lib32/libc.so.6 
+0xf7f98000 0xf7f99000 0x1000     0x233000   rw-p  /usr/lib32/libc.so.6 
+0xf7f99000 0xf7fa3000 0xa000     0x0        rw-p   
+0xf7fbd000 0xf7fbf000 0x2000     0x0        rw-p   
+0xf7fbf000 0xf7fc3000 0x4000     0x0        r--p  [vvar] 
+0xf7fc3000 0xf7fc5000 0x2000     0x0        r--p  [vvar_vclock] 
+0xf7fc5000 0xf7fc7000 0x2000     0x0        r-xp  [vdso] 
+0xf7fc7000 0xf7fc8000 0x1000     0x0        r--p  /usr/lib32/ld-linux.so.2 
+0xf7fc8000 0xf7fec000 0x24000    0x1000     r-xp  /usr/lib32/ld-linux.so.2 
+0xf7fec000 0xf7ffb000 0xf000     0x25000    r--p  /usr/lib32/ld-linux.so.2 
+0xf7ffb000 0xf7ffd000 0x2000     0x33000    r--p  /usr/lib32/ld-linux.so.2 
+0xf7ffd000 0xf7ffe000 0x1000     0x35000    rw-p  /usr/lib32/ld-linux.so.2 
+0xfffdd000 0xffffe000 0x21000    0x0        rwxp  [stack] 
 # find: search memory for a sequence of bytes
 # find [start_addr], [end_addr], <byte1>, <byte2>, ...
 find 0x400000, 0x401000, 0x55, 0x48, 0x89, 0xe5
@@ -506,10 +1079,34 @@ p.interactive()
 
 #### cfg
 ```bash
-objdump -d binary_name | awk '/^[[:xdigit:]]+:/ {address=$1} /call|jmp|je|jne|jg|jl|jz|jnz/ {print address, $0}'
+┌──(kali㉿kali)-[~/Desktop/Reverse-Engineering-Files/00_Hello World/linux_Build]
+└─$ objdump -d ./32bit_InSecure_hello_world | awk '/^[[:xdigit:]]+:/ {address=$1} /call|jmp|je|jne|jg|jl|jz|jnz/ {print address, $0}'
+  8049004:      e8 97 00 00 00          call   80490a0 <__x86.get_pc_thunk.bx>
+  8049017:      74 02                   je     804901b <_init+0x1b>
+  8049019:      ff d0                   call   *%eax
+  8049026:      ff 25 2c b2 04 08       jmp    *0x804b22c
+  8049030:      ff 25 30 b2 04 08       jmp    *0x804b230
+  804903b:      e9 e0 ff ff ff          jmp    8049020 <_init+0x20>
+  8049040:      ff 25 34 b2 04 08       jmp    *0x804b234
+  804904b:      e9 d0 ff ff ff          jmp    8049020 <_init+0x20>
+  804905b:      e8 19 00 00 00          call   8049079 <_start+0x29>
+  8049073:      e8 b8 ff ff ff          call   8049030 <__libc_start_main@plt>
+  804907d:      e9 e4 00 00 00          jmp    8049166 <main>
+  80490ba:      74 24                   je     80490e0 <deregister_tm_clones+0x30>
+  80490c3:      74 1b                   je     80490e0 <deregister_tm_clones+0x30>
+  80490d0:      ff d0                   call   *%eax
+  8049106:      74 20                   je     8049128 <register_tm_clones+0x38>
+  804910f:      74 17                   je     8049128 <register_tm_clones+0x38>
+  804911d:      ff d2                   call   *%edx
+  804913b:      75 1b                   jne    8049158 <__do_global_dtors_aux+0x28>
+  8049143:      e8 68 ff ff ff          call   80490b0 <deregister_tm_clones>
+  8049164:      eb 8a                   jmp    80490f0 <register_tm_clones>
+  8049175:      e8 28 00 00 00          call   80491a2 <__x86.get_pc_thunk.ax>
+  804918b:      e8 b0 fe ff ff          call   8049040 <printf@plt>
+  80491ac:      e8 ef fe ff ff          call   80490a0 <__x86.get_pc_thunk.bx>
 # Ghidra -> Display Function Graph
 ```
-
+![[G_HW_CFG.png]]
 #### Ghidra
 
 #### GDB Extensions (pwndbg/gef/peda)
